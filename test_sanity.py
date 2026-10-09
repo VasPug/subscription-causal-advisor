@@ -44,6 +44,20 @@ def main():
         assert gate == (orc2["delta_true"] > 0), (
             f"template disagrees with oracle at tau_x={tau_x}")
     assert gates[1.0] != gates[8.0], "regimes should disagree on the best action"
+
+    # 5) pricing: regimes sit on opposite sides, and the shared template agrees
+    #    with the oracle when fed the true elasticity
+    import pricing as pr
+    deltas = {}
+    for b_p in (0.02, 0.45):
+        cfg = dict(b_p=b_p, has_variation=True, q_drift=0.04)
+        hist = pr.make_history(cfg, np.random.default_rng(5))
+        d_true = pr.oracle_delta(cfg, hist["q_now"], 6)
+        d_tmpl = pr.profit_per_signup(b_p, None, pr.recent_conv(hist), 6)
+        deltas[b_p] = d_true
+        print(f"b_p={b_p}: delta_true={d_true:+.3f} template@truth={d_tmpl:+.3f}")
+        assert (d_tmpl > 0) == (d_true > 0), f"pricing template sign off at b_p={b_p}"
+    assert (deltas[0.02] > 0) != (deltas[0.45] > 0), "pricing regimes should disagree"
     print("sanity OK")
 
 

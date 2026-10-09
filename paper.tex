@@ -25,14 +25,14 @@
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small\sffamily\color{gray}Causal advisors vs.\ A/B tests for subscription decisions}
+\fancyhead[L]{\small\sffamily\color{gray}Causal advisors vs.\ how subscription businesses actually decide}
 \fancyhead[R]{\small\sffamily\thepage}
 \renewcommand{\headrulewidth}{0pt}
 \fancyfoot[L]{\footnotesize\sffamily\color{gray}Preprint. All results come from a simulation. See the Limitations section.}
 
 \title{\sffamily\bfseries\boldmath\color{dmblue}
-When Should a Subscription Business Trust Causal Inference Instead of an A/B Test?\\
-\large\normalfont\sffamily\color{black}A simulation study of paywall and pricing decisions}
+Can a Causal Advisor Beat How Subscription Businesses Actually Decide?\\
+\large\normalfont\sffamily\color{black}Paywall and pricing decisions, scored against known ground truth}
 \author{Vasanth Pugalenthi\thanks{Corresponding author: \texttt{vasanth.pugalen@gmail.com}}}
 \affil{Subscription-Causal-Inference project}
 \date{October 9, 2026}
@@ -43,46 +43,53 @@ When Should a Subscription Business Trust Causal Inference Instead of an A/B Tes
 
 \begin{abstract}
 \noindent
-Subscription businesses decide what to paywall and what to charge using
-dashboard comparisons, and sometimes A/B tests. We compare both against a
-causal advisor: a method that estimates the effect of a change from the
-company's own historical data, corrects for the biases it can see, and asks
-for an experiment when the data cannot support a conclusion. We score all
-three inside a simulated subscription business where the true effect of every
-change is known, measuring the profit each method's decisions lose. Each
-incumbent has a situation that ruins it. The naive comparison fails when the
-right move looks wrong on the surface. The short A/B test fails when the damage
-arrives more slowly than the test: it approves a harmful paywall in 97
-percent of those runs, losing \$5{,}380 per thousand users per year, worse
-than doing no analysis at all. The advisor is never the worst method in any
-situation and correctly asks for an experiment when history contains no
-signal. Its value is not accuracy against a good test. It is avoiding the big
-mistakes, and knowing when a test is truly needed.
+How do subscription businesses actually decide what to paywall and what to
+charge? The evidence says: mostly they change nothing, otherwise they read
+dashboards, and only rarely do they run A/B tests. We compare all three of
+these real policies against a causal advisor: a method that estimates the
+effect of a change from the company's own historical data, corrects for the
+biases it can see, and asks for an experiment when the data cannot support
+a conclusion. We score every policy inside a simulated subscription
+business where the true effect of each change is known, measuring the
+profit its decisions lose. Each incumbent fails somewhere. Doing nothing
+forfeits every profitable change. The dashboard reading fails when the
+right move looks wrong on the surface. Even the rarely used gold standard,
+a three month A/B test, fails when damage arrives more slowly than the
+test: it approves a harmful paywall in 97 percent of those runs, losing
+\$5{,}380 per thousand users per year, worse than doing no analysis at all.
+The advisor is never the worst policy in any situation and correctly asks
+for an experiment when history contains no signal. Its value is not
+accuracy against a good test. It is avoiding the big mistakes, and knowing
+when a test is truly needed.
 \end{abstract}
 
 \section{Introduction}
 A software product with a free tier and a paid tier faces two recurring
 questions. If we lock feature X behind the paid tier, do we gain upgrades or
 just lose users? If we raise the price 20 percent, does revenue go up or
-down? The usual answers come from a dashboard: ``users of feature X upgrade
-three times more often'' or ``conversion did not drop after our last price
-increase.'' Both readings are confounded. Engaged users upgrade more whether
-or not the feature causes it, and businesses raise prices when things are
-already going well, so the change gets credit for growth it did not create.
-The textbook fix, a randomized test, is often impractical: price tests upset
-customers, and retention effects need months to show up, so a short test can
-look clean and still point the wrong way. Practice reflects this: even among
+down? Start with how these decisions are actually made, because it is not
+the textbook answer. Randomized tests are rare in practice: even among
 high-technology startups relatively few firms adopt A/B testing at all
 \citep{koning2022}, and most large US retail chains do not vary prices even
-across very different markets \citep{dellavigna2019}.
+across very different markets, a pattern attributed to managerial inertia
+\citep{dellavigna2019}. What firms mostly do is leave things as they are,
+or read a dashboard: ``users of feature X upgrade three times more often''
+or ``conversion did not drop after our last price increase.'' Both readings
+are confounded. Engaged users upgrade more whether or not the feature
+causes it, and businesses raise prices when things are already going well,
+so the change gets credit for growth it did not create. And the rare firm
+that does test faces real obstacles: price tests upset customers, and
+retention effects need months to show up, so a short test can look clean
+and still point the wrong way.
 
-This paper studies a middle path, a \emph{causal advisor}
-(Figure~\ref{fig:flow}). It uses the data the company already has, adjusts
-for differences it can measure, and stress tests the answer against what it
-cannot. If the decision survives, it recommends an action; if not, it asks
-for a specific experiment. The design follows \citet{cadahia2026}, who built
-a similar gate for retail pricing. Our question: does this policy beat the
-two things businesses actually do?
+This paper asks whether a \emph{causal advisor}
+(Figure~\ref{fig:flow}) can beat this real baseline. The advisor uses the
+data the company already has, adjusts for differences it can measure, and
+stress tests the answer against what it cannot. If the decision survives,
+it recommends an action; if not, it asks for a specific experiment. The
+design follows \citet{cadahia2026}, who built a similar gate for retail
+pricing. We score it against all three things businesses actually do:
+nothing, dashboards, and the occasional short A/B test.
 
 Real data cannot answer that, because it never shows what the other choice
 would have done. Following the logic of the ACIC benchmarks \citep{hahn2019},

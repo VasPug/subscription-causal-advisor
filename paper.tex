@@ -1,4 +1,4 @@
-\documentclass[11pt]{article}
+\documentclass[10pt]{article}
 
 % DeepMind-style preprint look built from standard packages.
 \usepackage[a4paper,margin=1.05in,top=1.15in,headheight=14pt]{geometry}
@@ -146,20 +146,38 @@ pay (test users on the worse option, waiting for results), in dollars per
 thousand users per year.
 
 \section{The three methods}
-All three feed their estimate into the same simple profit formula; they
-differ only in evidence quality and willingness to say ``not yet.''
-\textbf{Naive comparison}: take the dashboard
-numbers at face value: compare adopters with non-adopters; for pricing, compare
-conversion before and after the old change, and if price never changed,
-assume demand will not react. \textbf{Causal advisor}: compare adopters with
-statistically similar non-adopters; for pricing, fit a demand model
-controlling for trend and seasonality. Then stress test: widen the
-uncertainty range and re-estimate as if the most important attribute were
-missing; if the decision flips anywhere in that range, request an experiment
-instead of acting. \textbf{A/B test}: a randomized test as a busy company
-runs one, 10 percent of users for three months (paywall) or two months
-(pricing), short-term result scaled to a year. The randomization is honest;
+All three feed their estimate into the same simple profit formula, so they
+differ only in the quality of their evidence and their willingness to say
+``not yet.''
+
+\paragraph{Naive comparison} Take the dashboard numbers at face value:
+compare adopters with non-adopters, and conversion before and after the old
+price change. If the price never changed, assume demand will not react. This
+is how most monetization decisions are made today.
+
+\paragraph{A/B test} A randomized test as a busy company runs one: 10
+percent of users, three months for the paywall, two months for pricing, and
+the short-term result scaled to a full year. The randomization is honest;
 the scaling is the risk.
+
+\paragraph{Causal advisor} The advisor is not a prediction model. A
+prediction model learns patterns in the data as it is, and the pattern
+``feature X users convert three times more'' is true while saying nothing
+about what happens if you lock the feature. The advisor instead tries to
+answer the intervention question in four steps, and only the first looks
+like machine learning. First, it \emph{estimates the effect} by comparing
+like with like: a small statistical model learns who tends to adopt the
+feature, so adopters are measured against non-adopters who look the same on
+everything the company can observe (for pricing, a demand model that
+controls for the time trend and seasonality). Second, it turns the point
+estimate into an \emph{uncertainty range} by re-estimating on resampled
+data. Third, it \emph{stress tests} the answer against what it cannot see:
+it re-runs the estimate as if the most informative attribute had been
+missing, and treats that shift as the plausible size of hidden bias. Fourth,
+a \emph{decision rule}: if the recommendation holds everywhere inside the
+widened range, act on it; if it flips anywhere, refuse and output the
+specific experiment that would settle it. Nothing is trained end to end;
+the refusal step is the defining feature, and it is logic, not learning.
 
 \begin{figure}[t]
   \centering
@@ -219,9 +237,9 @@ Decision & Method & Accuracy & Regret (\$/1k/yr) & Asked for test \\
 \paragraph{The naive comparison fails when the right move looks wrong}
 Figure~\ref{fig:bias}a shows the mechanism: the raw adopter comparison
 overrates the feature by roughly a factor of three at every level of the
-hidden-bias dial. Convinced the feature is precious, it never
-locks it, which is exactly wrong in the world where locking pays (\$2{,}689
-lost per thousand users per year, Figure~\ref{fig:regret}a). In pricing, the
+hidden-bias dial. Convinced the feature is precious, it never locks it,
+which is exactly wrong in the world where locking pays
+(Figure~\ref{fig:regret}a). In pricing, the
 misread elasticity (Figure~\ref{fig:bias}b) plus the ``demand won't react''
 default make it raise into sensitive demand, losing up to \$5{,}446 per
 thousand signups. The failure is systematic: the same confident reading
@@ -242,12 +260,11 @@ to choose correctly most of the time, and its stress test converts many
 remaining dangerous calls into ``run an experiment,'' including every run
 where the price had never changed. It posts the lowest overall regret in
 both decisions (Table~\ref{tab:overall}), and its worst situation
-(\$1{,}101) is far safer than the naive comparison's (\$2{,}689) or the A/B test's
-(\$5{,}380). One surprise: when the advisor declines the paywall question it
-hands the decision to the A/B test, which is usually wrong in the world
-where locking backfires, so the advisor inherits part of that error. Asking
-for a test is only as safe as the test; the advisor must also specify how
-long to run it and what to measure.
+(\$1{,}101) is far safer than the naive comparison's (\$2{,}689) or the A/B
+test's (\$5{,}380). One surprise: when it declines the paywall question it
+defers to the A/B test, which is usually wrong where locking backfires, so
+it inherits part of that error. An abstention is only as safe as the
+experiment it commissions.
 
 \section{Limitations and conclusion}
 These numbers show a pattern, not what any real company would measure. We
@@ -256,10 +273,9 @@ maker and test taker \citep{hahn2019}; the A/B failure follows from the
 short window and crude scale-up we gave it, and a longer test or better
 early indicators would close much of that gap; all methods share one
 simplified profit formula; and the advisor's stress test is a heuristic
-stand-in for formal sensitivity analysis \citep{chernozhukov2018}, which
-matters because even careful adjustment can miss, as paired experimental and
-observational data at Microsoft recently showed \citep{young2026}.
-Semi-synthetic replication on real subscription data is the next step.
+stand-in for formal sensitivity analysis \citep{chernozhukov2018}; even
+careful adjustment can miss \citep{young2026}. Semi-synthetic replication
+on real subscription data is the next step.
 
 The conclusion the study supports: the two methods businesses actually use
 are gambles on which world they live in, each disastrous in a situation the

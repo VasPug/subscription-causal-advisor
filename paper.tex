@@ -153,6 +153,11 @@ All three feed their estimate into the same simple profit formula, so they
 differ only in the quality of their evidence and their willingness to say
 ``not yet.''
 
+\paragraph{Do nothing} Keep the current paywall and price. Per the evidence
+above, this is the modal firm's actual policy, so it is the floor every
+other method must beat. It needs no data and pays no testing cost; its
+regret is every profitable change it forfeits.
+
 \paragraph{Naive comparison} Take the dashboard numbers at face value:
 compare adopters with non-adopters, and conversion before and after the old
 price change. If the price never changed, assume demand will not react. This
@@ -216,7 +221,8 @@ the refusal step is the defining feature, and it is logic, not learning.
 \caption{\textbf{Overall scores.} Accuracy is the share of runs choosing the
 truly better action; regret is average profit lost per thousand users
 (paywall) or signups (pricing) per year; the last column is how often the
-advisor asked for an experiment. Per-situation breakdowns in
+advisor asked for an experiment. ``Do nothing'' is scored on the same runs
+directly from the known truth. Per-situation breakdowns in
 Figure~\ref{fig:regret}.}
 \label{tab:overall}
 \small
@@ -224,12 +230,14 @@ Figure~\ref{fig:regret}.}
 \toprule
 Decision & Method & Accuracy & Regret (\$/1k/yr) & Asked for test \\
 \midrule
-\multirow{3}{*}{Paywall}
+\multirow{4}{*}{Paywall}
+ & do nothing & 0.50 & 1{,}345 & \\
  & naive & 0.50 & 1{,}345 & \\
  & A/B test  & 0.51 & 2{,}992 & \\
  & advisor   & \textbf{0.83} & \textbf{873} & 44\% \\
 \midrule
-\multirow{3}{*}{Pricing}
+\multirow{4}{*}{Pricing}
+ & do nothing & 0.50 & 312 & \\
  & naive & 0.68 & 1{,}268 & \\
  & A/B test  & 0.88 & 323 & \\
  & advisor   & \textbf{0.90} & \textbf{239} & 72\% \\
@@ -264,10 +272,15 @@ remaining dangerous calls into ``run an experiment,'' including every run
 where the price had never changed. It posts the lowest overall regret in
 both decisions (Table~\ref{tab:overall}), and its worst situation
 (\$1{,}101) is far safer than the naive comparison's (\$2{,}689) or the A/B
-test's (\$5{,}380). One surprise: when it declines the paywall question it
-defers to the A/B test, which is usually wrong where locking backfires, so
-it inherits part of that error. An abstention is only as safe as the
-experiment it commissions.
+test's (\$5{,}380). The do-nothing policy is a serious benchmark, not a
+strawman: on the paywall it coincides with the naive comparison (neither
+ever locks), and in pricing its \$312 regret nearly matches the A/B test's
+\$323, since inaction is free and half the worlds punish action. The
+advisor beats it in both decisions by capturing the profitable changes
+inertia forfeits. One surprise: when the advisor declines the paywall
+question it defers to the A/B test, which is usually wrong where locking
+backfires, so it inherits part of that error. An abstention is only as safe
+as the experiment it commissions.
 
 \section{Limitations and conclusion}
 These numbers show a pattern, not what any real company would measure. We
@@ -280,9 +293,10 @@ stand-in for formal sensitivity analysis \citep{chernozhukov2018}; even
 careful adjustment can miss \citep{young2026}. Semi-synthetic replication
 on real subscription data is the next step.
 
-The conclusion the study supports: the two methods businesses actually use
-are gambles on which world they live in, each disastrous in a situation the
-other survives. The causal advisor, which adjusts for what it can measure
+The conclusion the study supports: what businesses do today, whether
+reading dashboards, running short tests, or changing nothing, is a gamble
+on which world they live in, each approach disastrous in a situation
+another survives. The causal advisor, which adjusts for what it can measure
 and asks for an experiment when the answer is not solid, was never the worst
 option. That is the honest pitch: not ``better than an A/B test,'' but
 ``never the method that quietly loses five dollars per user per year.''

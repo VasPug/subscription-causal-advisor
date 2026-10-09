@@ -85,8 +85,9 @@ and still point the wrong way.
 This paper asks whether a \emph{causal advisor}
 (Figure~\ref{fig:flow}) can beat this real baseline. The advisor uses the
 data the company already has, adjusts for differences it can measure, and
-stress tests the answer against what it cannot. If the decision survives,
-it recommends an action; if not, it asks for a specific experiment. The
+checks whether the recommendation survives its uncertainty. If it does,
+the advisor recommends the action; if not, it asks for a specific
+experiment. The
 design follows \citet{cadahia2026}, who built a similar gate for retail
 pricing. We score it against all three things businesses actually do:
 nothing, dashboards, and the occasional short A/B test.
@@ -109,7 +110,7 @@ profit lost, over 30 repetitions of every setting.
   arr/.style={-{Stealth[length=2mm]}, thick}]
 \node[box] (data) {Company's own\\historical data};
 \node[box, right=8mm of data] (est) {Adjusted estimate\\of the effect};
-\node[dec, right=8mm of est] (gate) {Does the decision survive\\uncertainty + stress tests?};
+\node[dec, right=8mm of est] (gate) {Does the decision survive\\the uncertainty range?};
 \node[act, right=10mm of gate, yshift=6.5mm] (go) {Recommend\\the action};
 \node[act, right=10mm of gate, yshift=-6.5mm] (exp) {Specify an\\experiment};
 \draw[arr] (data) -- (est);
@@ -118,8 +119,8 @@ profit lost, over 30 repetitions of every setting.
 \draw[arr] (gate.east) -- node[below, sloped, font=\scriptsize]{no} (exp.west);
 \end{tikzpicture}
 \caption{\textbf{The causal advisor.} It acts only when the recommendation
-survives both statistical uncertainty and a stress test for hidden bias;
-otherwise it outputs a concrete experiment request.}
+holds across its whole uncertainty range; otherwise it outputs a concrete
+experiment request.}
 \label{fig:flow}
 \end{figure}
 
@@ -179,20 +180,19 @@ the scaling is the risk.
 prediction model learns patterns in the data as it is, and the pattern
 ``feature X users convert three times more'' is true while saying nothing
 about what happens if you lock the feature. The advisor instead tries to
-answer the intervention question in four steps, and only the first looks
+answer the intervention question in three steps, and only the first looks
 like machine learning. First, it \emph{estimates the effect} by comparing
 like with like: a small statistical model learns who tends to adopt the
 feature, so adopters are measured against non-adopters who look the same on
 everything the company can observe (for pricing, a demand model that
 controls for the time trend and seasonality). Second, it turns the point
-estimate into an \emph{uncertainty range} by re-estimating on resampled
-data. Third, it \emph{stress tests} the answer against what it cannot see:
-it re-runs the estimate as if the most informative attribute had been
-missing, and treats that shift as the plausible size of hidden bias. Fourth,
-a \emph{decision rule}: if the recommendation holds everywhere inside the
-widened range, act on it; if it flips anywhere, refuse and output the
-specific experiment that would settle it. Nothing is trained end to end;
-the refusal step is the defining feature, and it is logic, not learning.
+estimate into an \emph{uncertainty range}, from re-estimation on resampled
+data or the fitted model's standard errors. Third, a \emph{decision rule}:
+if the recommendation holds everywhere inside the range, act on it; if it
+flips anywhere, or if the question is unanswerable from history (the price
+never varied), refuse and output the specific experiment that would settle
+it. Nothing is trained end to end; the refusal step is the defining
+feature, and it is logic, not learning.
 
 \begin{figure}[t]
   \centering
@@ -241,13 +241,13 @@ Decision & Method & Accuracy & Regret (\$/1k/yr) & Asked for test \\
  & do nothing & 0.50 & 1{,}345 & \\
  & naive & 0.50 & 1{,}345 & \\
  & A/B test  & 0.51 & 2{,}992 & \\
- & advisor   & \textbf{0.83} & \textbf{873} & 44\% \\
+ & advisor   & \textbf{0.67} & \textbf{988} & 15\% \\
 \midrule
 \multirow{4}{*}{Pricing}
  & do nothing & 0.50 & 312 & \\
  & naive & 0.68 & 1{,}268 & \\
  & A/B test  & 0.88 & 323 & \\
- & advisor   & \textbf{0.90} & \textbf{239} & 72\% \\
+ & advisor   & \textbf{0.89} & \textbf{246} & 77\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -274,20 +274,22 @@ about arrive quickly.
 
 \paragraph{The advisor is never the worst option}
 Its adjustment removes about half the bias (Figure~\ref{fig:bias}), enough
-to choose correctly most of the time, and its stress test converts many
-remaining dangerous calls into ``run an experiment,'' including every run
-where the price had never changed. It posts the lowest overall regret in
-both decisions (Table~\ref{tab:overall}), and its worst situation
-(\$1{,}101) is far safer than the naive comparison's (\$2{,}689) or the A/B
-test's (\$5{,}380). The do-nothing policy is a serious benchmark, not a
-strawman: on the paywall it coincides with the naive comparison (neither
+to choose correctly most of the time, and it refuses to act whenever the
+decision flips inside its uncertainty range, including every run where the
+price had never changed. It posts the lowest overall regret in both
+decisions (Table~\ref{tab:overall}), and its worst situation (\$1{,}976)
+is safer than the naive comparison's (\$2{,}689) and far safer than the
+A/B test's (\$5{,}380). The do-nothing policy is a serious benchmark, not
+a strawman: on the paywall it coincides with the naive comparison (neither
 ever locks), and in pricing its \$312 regret nearly matches the A/B test's
 \$323, since inaction is free and half the worlds punish action. The
 advisor beats it in both decisions by capturing the profitable changes
-inertia forfeits. One surprise: when the advisor declines the paywall
-question it defers to the A/B test, which is usually wrong where locking
-backfires, so it inherits part of that error. An abstention is only as safe
-as the experiment it commissions.
+inertia forfeits. The advisor's own weak spot is the bias it cannot see:
+its uncertainty range covers sampling noise but not hidden confounding, so
+as the hidden-bias dial rises in the locking-pays world its estimate
+drifts across the decision boundary and, at the strongest setting, it
+gives the same wrong answer as the naive comparison. Guarding that flank
+needs formal sensitivity analysis, not more data.
 
 \section{Limitations and conclusion}
 These numbers show a pattern, not what any real company would measure. We
@@ -295,10 +297,11 @@ tuned both the simulator and the methods, with no separation between test
 maker and test taker \citep{hahn2019}; the A/B failure follows from the
 short window and crude scale-up we gave it, and a longer test or better
 early indicators would close much of that gap; all methods share one
-simplified profit formula; and the advisor's stress test is a heuristic
-stand-in for formal sensitivity analysis \citep{chernozhukov2018}; even
-careful adjustment can miss \citep{young2026}. Semi-synthetic replication
-on real subscription data is the next step.
+simplified profit formula; and the advisor's abstention covers only
+statistical uncertainty, leaving hidden confounding unguarded, which is
+where formal sensitivity analysis would slot in \citep{chernozhukov2018};
+even careful adjustment can miss \citep{young2026}. Semi-synthetic
+replication on real subscription data is the next step.
 
 The conclusion the study supports: what businesses do today, whether
 reading dashboards, running short tests, or changing nothing, is a gamble
@@ -357,9 +360,11 @@ J.~Young, M.~Ngatia, and E.~W. Dillon.
 \appendix
 \section{Reproducibility, compute, and disclosure}
 The simulator, methods, and scoring code live in the project repository.
-Each experiment is a frozen branch answered by one logged run (IDs
-\texttt{9e9cde5b} and \texttt{06bd0de4}). Runs are seeded, and true effects
-come from replaying identical random draws under both choices. Everything
+All reported numbers come from one logged run of both decisions
+(\texttt{4eaaadd0}); earlier runs (\texttt{9e9cde5b}, \texttt{06bd0de4})
+tested a variant whose abstention also included a hidden-bias heuristic,
+which abstained more and scored similarly. Runs are seeded, and true
+effects come from replaying identical random draws under both choices. Everything
 runs on an ordinary CPU in under five minutes, in a Python environment with
 NumPy as the only dependency, rebuilt by the fixed command \texttt{bash
 run.sh}. This paper was drafted by an LLM research agent (Claude, Anthropic)

@@ -1,0 +1,469 @@
+\documentclass[11pt]{article}
+
+% --- Google-DeepMind-style preprint look, built from standard packages.
+% (The official GDM class is not public; this replicates its appearance:
+% single column, serif body, sans-serif navy headings, rule-framed abstract.)
+\usepackage[a4paper,margin=1.05in,top=1.2in,headheight=14pt]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage[dvipsnames]{xcolor}
+\definecolor{dmblue}{RGB}{0,82,155}
+\usepackage{titlesec}
+\usepackage[affil-it]{authblk}
+\usepackage{natbib}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage[colorlinks=true,allcolors=dmblue]{hyperref}
+
+\titleformat{\section}{\Large\sffamily\bfseries\color{dmblue}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\large\sffamily\bfseries\color{dmblue}}{\thesubsection.}{0.6em}{}
+\titleformat{\paragraph}[runin]{\sffamily\bfseries}{}{0em}{}[.]
+\captionsetup{font=small,labelfont={bf,color=dmblue}}
+\setlength{\parskip}{2pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\sffamily\color{gray}Causal advisors vs.\ A/B tests for subscription monetization}
+\fancyhead[R]{\small\sffamily\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\footnotesize\sffamily\color{gray}Preprint. Synthetic-benchmark study; see Limitations before quoting numbers.}
+
+\title{\sffamily\bfseries\boldmath\color{dmblue}
+When Should a Subscription Business Trust Causal Inference Instead of an A/B Test?\\
+\large\normalfont\sffamily\color{black}A ground-truth simulation study of packaging and pricing decisions}
+\author{Vasanth\thanks{Corresponding author: \texttt{vasanth@cere.io}}}
+\affil{Subscription-Causal-Inference project}
+\date{October 9, 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent
+Subscription businesses decide what to paywall and what to charge using naive
+correlational analytics, and occasionally A/B tests. We ask when an
+observational \emph{causal advisor} --- confounding-adjusted estimation plus an
+explicit act/abstain-and-experiment rule --- makes better monetization
+decisions than either. Because no real dataset reveals the counterfactual, we
+build a synthetic freemium business with a known oracle and score three
+decision-makers on \emph{policy regret in dollars} across two decisions
+(gating a feature; raising price 20\%), two economic regimes each, graded
+confounding, and 30 replicates. Three findings. (1)~The naive contrast fails
+precisely where the profitable move is counterintuitive: confounding inflates
+the apparent value of the feature ($+13$ on a true effect of ${\sim}6$
+\$/user/yr), so it never gates; endogenously timed price changes make demand
+look inelastic, so it raises into elastic demand. (2)~A realistically
+constrained A/B test fails where damage unfolds more slowly than the test: a
+3-month gate test sees unlock revenue but not compounding frustration churn,
+endorsing the destructive gate in ${\sim}97\%$ of high-value-regime replicates
+--- the worst method in that regime, at \$5{,}380 regret per 1{,}000 users per
+year. (3)~The advisor is never the catastrophic method (worst-regime regret
+\$1{,}101 vs.\ \$2{,}689 naive and \$5{,}380 A/B) and correctly abstains to an
+experiment when identification fails, e.g.\ 100\% abstention when price never
+varied. An unplanned corollary: abstaining \emph{into a badly designed
+experiment} imports that experiment's error, so experiment design is part of
+the advisor's job. We release the simulator, methods, and per-replicate data.
+\end{abstract}
+
+\section{Introduction}
+A software-as-a-service business deciding whether to move a feature behind its
+paywall, or to raise its price, typically reasons from a dashboard: ``users of
+feature X convert at $3\times$ the rate of non-users'' or ``conversion did not
+drop after our last price increase.'' Both statements are confounded ---
+engaged users both use more features and convert more; price changes are timed
+when business conditions are improving --- and both can point to decisions
+that destroy profit. The textbook remedy, a randomized experiment, is often
+infeasible (price tests create fairness and grandfathering problems), slow, or
+quietly biased by its own duration when the outcomes that matter (retention,
+lifetime value) unfold over quarters rather than weeks.
+
+This paper evaluates a middle path we call a \emph{causal advisor}: estimate
+the decision-relevant effect from the business's own observational data with
+confounding adjustment, quantify what the evidence can and cannot support, and
+either recommend an action or explicitly abstain and specify the experiment
+that would resolve the question. Abstention-as-output follows
+\citet{cadahia2026}, who built an act/wait/experiment gate for retail list
+pricing; our contribution is to evaluate this design \emph{as a decision
+policy} against the two incumbents --- naive analytics and the A/B test --- on
+decisions where ground truth is known, including the feature-packaging
+decision where confounding is strongest and, to our knowledge, no such
+comparison exists.
+
+Evaluating against ground truth requires simulation: on real data the
+counterfactual is unobserved, which is why the within-study literature from
+\citet{lalonde1986} to \citet{young2026} relies on rare paired
+experimental--observational datasets, and why the ACIC challenges
+\citep{hahn2019} evaluate on synthetic data with revealed truth. We adopt the
+simulation route deliberately: it lets us dial confounding strength,
+manipulate whether identification is possible at all, and --- critically ---
+price every mistake in dollars via an oracle, rather than in estimator error.
+
+\paragraph{Claim} The right question is not ``is causal inference more
+accurate than an A/B test?'' (it is not, when a well-designed test is
+feasible) but ``which decision policy avoids catastrophic regret across the
+regimes a business cannot distinguish in advance?'' On that question the
+advisor dominates: it is the only method of the three that is never the worst,
+and it knows when it does not know.
+
+\section{Related work}
+\paragraph{Validating observational methods against experiments}
+\citet{lalonde1986} initiated the within-study comparison literature;
+\citet{young2026} provide the most recent industrial instance, pairing an
+experimental feature rollout at Microsoft with simultaneous endogenous
+adopters, and find that doubly robust machine-learning estimators recover the
+experimental benchmark for one outcome but fail for another even with rich
+covariates --- a warning we encode in our advisor's abstention rule.
+\citet{gordon2017} compare observational estimates against large advertising
+RCTs at Facebook. The ACIC data-analysis challenges \citep{hahn2019} set the
+standard for evaluating causal estimators on synthetic data with targeted
+selection; we follow their logic but score decisions, not estimates, which
+\citet{fan2026} argue is the evaluation that matters once ranking metrics and
+effect accuracy decouple.
+
+\paragraph{Causal decision systems in industry}
+\citet{chou2026} describe Netflix's production workflow automating
+observational causal inference with human oversight. \citet{cadahia2026} is
+closest to our pricing experiment: a Double-ML-based pricing system whose
+primary output can be \textsc{wait} or \textsc{experiment} rather than a
+number, validated on synthetic generators; their validation returns ``more
+negative than positive verdicts'' --- notably massive over-abstention --- which
+our results complement on the packaging side. Work on combining short
+experiments with long-horizon observational data \citep{colnet2024} and on
+deciding whether more observational data can ever resolve a decision
+\citep{effectbounds2026} formalizes pieces of the advisor's abstention logic.
+
+\paragraph{Subscription economics}
+Field evidence on freemium design --- e.g.\ a 680k-user randomized trial of
+free-trial duration \citep{trialduration2025} and quasi-experimental estimates
+of news paywall demand effects \citep{paywalls2013} --- documents the slow,
+retention-mediated dynamics that our simulator's frustration-churn mechanism
+stylizes and that break short A/B tests in our results.
+
+\section{A simulated subscription business with an oracle}
+\label{sec:sim}
+We simulate a freemium product month by month over a 12-month scoring horizon:
+free users generate margin \$2/month, premium costs \$10/month. Each user has
+latent engagement $a_i \sim \Gamma(2,1)$, hidden taste $h_i \sim
+\mathcal{N}(0,1)$, and willingness to pay $w_i = 2 + 3a_i + \varepsilon_i$.
+Monthly, users may upgrade (logistic in $w_i$, $a_i$, $h_i$) and churn
+(logistic, decreasing in experienced value and $h_i$). The oracle simulates
+any policy under common random numbers, so true policy deltas and true
+treatment effects are known exactly.
+
+\subsection{Decision A: gating a feature}
+Feature X is free today. Adoption is endogenous:
+$\Pr(D_i{=}1) = \sigma(-1 + 0.9\,a_i + c\,h_i)$, where $c \in \{0, 0.6, 1.2,
+1.8\}$ dials \emph{unobservable} confounding ($h_i$ always affects upgrade and
+churn; it affects adoption only through $c$). Engagement $a_i$ confounds at
+every $c$ but is observed only through noisy proxies ($a_i + \mathcal{N}(0,
+0.4)$, $a_i + \mathcal{N}(0,0.8)$, plus a pure-noise covariate). Adopters
+experience extra value $x_i = \tau_x(0.3 + 0.35\,a_i)$, which raises
+retention. Gating X (i) adds an unlock motive to upgrade for adopters priced
+within reach, and (ii) adds frustration churn $\propto x_i$ for adopters who
+do not pay. With $\tau_x{=}1$ the unlock revenue wins (true gate delta
+${\approx}{+}2.7$ \$/user/yr); with $\tau_x{=}8$ frustration churn wins
+(${\approx}{-}5.5$ \$/user/yr). The regimes deliberately sit on opposite sides
+of the decision boundary, and the naive dashboard reads the same in both.
+
+\subsection{Decision B: raising the price 20\%}
+The business has 36 months of signup cohorts (${\sim}400$/month). Conversion
+at signup is logistic in price, seasonality, and a latent quality trend $q_t$
+(random-walk drift $\in \{0, 0.04\}$). In half the configurations the business
+once raised price $10 \to 11$, timed \emph{endogenously} at the steepest
+3-month quality upswing --- the realistic worst case for before/after
+reasoning; in the other half price never varied, so the elasticity is not
+identified from history at all. True elasticity $b_p \in \{0.02, 0.45\}$ makes
+the proposed raise $10 \to 12$ profitable (${\approx}{+}0.6$ \$/signup/yr) or
+destructive (${\approx}{-}4.2$ \$/signup/yr); churn also rises mildly with
+price.
+
+\subsection{Scoring}
+Every method outputs an action. With true policy delta $\Delta$ known, the
+chosen action's value is $\Delta$ (act) or $0$ (status quo); \emph{regret} is
+the shortfall from the better of the two, plus any experimentation costs
+actually incurred (exposure of test cohorts to the worse arm, and the delay of
+withholding the better policy during the test). We report mean regret in
+dollars per 1{,}000 users (or signups) per year, decision accuracy, estimator
+bias, and abstention rate, over 30 replicates per cell.
+
+\section{Three decision-makers}
+\label{sec:methods}
+All three share the same stylized profit template mapping an effect estimate
+to a gate/keep (or raise/hold) decision, so they differ only in evidence
+quality and the willingness to say ``run an experiment.''
+
+\paragraph{Naive analytics (the incumbent)} For packaging, the raw
+adopter-vs-non-adopter profit contrast. For pricing, the before/after
+log-conversion contrast around the historical change; if price never changed,
+the ``competitor benchmark'' default of zero elasticity.
+
+\paragraph{Causal advisor} For packaging, a doubly robust ATT estimator
+(logistic propensity $\times$ outcome regression on the observed proxies,
+propensities clipped to $[0.02, 0.98]$). For pricing, user-level logistic
+demand with price, linear trend, and seasonal controls. The advisor
+\emph{abstains} when (i) identification fails outright (no historical price
+variation), or (ii) the decision flips anywhere inside its bootstrap 95\%
+interval widened by a sensitivity shift --- the estimate's movement when the
+single most load-bearing covariate (packaging) or the trend control (pricing)
+is dropped, a cheap stand-in for formal sensitivity analysis
+\citep{chernozhukov2018}. An abstaining advisor commissions the A/B test and
+pays its costs.
+
+\paragraph{Constrained A/B test} A randomized test as a business would
+actually run it: 10\% of users (or two months of signups), a 3-month
+(packaging) or 2-month (pricing) window, and naive $\times 4$ (resp.\ $\times
+6$) extrapolation of the short-window profit delta to the annual horizon. It
+pays exposure and delay costs. The randomization is real, so it is unbiased
+for the \emph{short-window} effect; its failure mode is the extrapolation.
+
+\section{Results}
+\label{sec:results}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figs/regret-by-regime.pdf}
+  \caption{\textbf{Each method has a regime that ruins it --- except the
+  advisor.} Mean policy regret (bars; \$ per 1{,}000 users or signups per
+  year; 95\% CIs over 30 replicates; confounding levels and history variants
+  averaged within replicate). \textbf{(a)}~Feature gating: the naive contrast
+  never gates and forfeits the profitable gate (left); the 3-month A/B test
+  extrapolates away slow frustration churn and endorses the destructive gate
+  (right). \textbf{(b)}~Price raise: the naive before/after raises into
+  elastic demand (right); the A/B test works here because pricing feedback is
+  fast. The advisor is never the worst method in any regime.}
+  \label{fig:regret}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{\textbf{Packaging decision} (12{,}000 users, 30 replicates per cell;
+regimes aggregate four confounding levels). Regret in \$ per 1{,}000 users per
+year; ``abst.''\ is the advisor's abstention rate (abstention defers to the
+A/B test and pays its costs).}
+\label{tab:packaging}
+\small
+\begin{tabular}{llrrr}
+\toprule
+Regime & Method & Accuracy & Regret & Abst. \\
+\midrule
+\multirow{3}{*}{\shortstack[l]{Low-value feature\\(gating pays, $+2.7$/user/yr)}}
+ & naive   & 0.00 & 2{,}689 & --- \\
+ & A/B     & 1.00 & 605 & --- \\
+ & advisor & 0.76 & 1{,}101 & 0.76 \\
+\midrule
+\multirow{3}{*}{\shortstack[l]{High-value feature\\(gating destroys, $-5.5$/user/yr)}}
+ & naive   & 1.00 & 0 & --- \\
+ & A/B     & 0.03 & 5{,}380 & --- \\
+ & advisor & 0.89 & 645 & 0.12 \\
+\midrule
+\multirow{3}{*}{Overall}
+ & naive   & 0.50 & 1{,}345 & --- \\
+ & A/B     & 0.51 & 2{,}992 & --- \\
+ & advisor & \textbf{0.83} & \textbf{873} & 0.44 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{\textbf{Pricing decision} (36-month history, 30 replicates per cell;
+regimes aggregate drift levels and whether price ever varied historically).
+Regret in \$ per 1{,}000 signups per year.}
+\label{tab:pricing}
+\small
+\begin{tabular}{llrrr}
+\toprule
+Regime & Method & Accuracy & Regret & Abst. \\
+\midrule
+\multirow{3}{*}{\shortstack[l]{Inelastic demand\\(raise pays, $+0.6$/signup/yr)}}
+ & naive   & 0.93 & 30 & --- \\
+ & A/B     & 0.76 & 299 & --- \\
+ & advisor & 0.79 & 259 & 0.83 \\
+\midrule
+\multirow{3}{*}{\shortstack[l]{Elastic demand\\(raise destroys, $-4.2$/signup/yr)}}
+ & naive   & 0.43 & 2{,}507 & --- \\
+ & A/B     & 1.00 & 346 & --- \\
+ & advisor & 1.00 & 219 & 0.61 \\
+\midrule
+\multirow{3}{*}{Overall}
+ & naive   & 0.68 & 1{,}268 & --- \\
+ & A/B     & 0.88 & 323 & --- \\
+ & advisor & \textbf{0.90} & \textbf{239} & 0.72 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The naive contrast fails where the profitable move is counterintuitive}
+Under confounding, the adopter contrast overstates the feature's causal value
+(bias $+12.9$ on a true ATT of ${\sim}6$--$8$ \$/user/yr, growing with the
+hidden-confounding dial), so naive analytics concludes the feature is too
+valuable to gate --- in \emph{every} replicate, including all of those where
+gating is profitable (Table~\ref{tab:packaging}, top block: accuracy 0.00). In
+pricing, the endogenous timing of the historical change makes demand look
+inelastic (elasticity bias $-0.35$ with quality drift), and the zero-elasticity
+benchmark default makes it reckless when history contains no variation:
+\$2{,}860--\$5{,}446 regret per 1{,}000 signups in the elastic, no-variation
+cells. The failure is systematic, not noisy: the dashboard gives the same
+confident reading in regimes with opposite correct answers.
+
+\subsection{The A/B test fails where damage is slower than the test}
+The gate test's randomization is genuine, yet it endorses the destructive gate
+in 97\% of high-value-regime replicates (Table~\ref{tab:packaging}): within
+three months the unlock upgrades arrive but the frustration churn has not yet
+compounded, and the $\times 4$ extrapolation bakes the early win in. In this
+regime the experiment is \emph{worse than no analysis}: \$5{,}380 vs.\ the
+naive method's accidental \$0. In pricing, where conversion responds within
+the test window, the same design is accurate and cheap (Table~\ref{tab:pricing}),
+paying only exposure and delay. Short tests are not a safe default; they are a
+bet that outcome dynamics are fast.
+
+\subsection{The advisor is never the catastrophic method}
+Adjustment on noisy proxies roughly halves the estimation bias (e.g.\ $+5.9$
+vs.\ $+12.9$ packaging; $-0.05$ vs.\ $-0.21$ pricing), which is enough to flip
+most decisions to correct; the abstention rule absorbs most of the rest. The
+advisor posts the best overall regret in both experiments (\$873 and \$239 per
+1{,}000 per year) and, more importantly for a policy that must be chosen
+\emph{before} the regime is known, its worst-regime regret (\$1{,}101) is
+2.4$\times$ better than naive's (\$2{,}689) and 4.9$\times$ better than the
+A/B test's (\$5{,}380). When identification fails outright --- price never
+varied --- it abstains in 100\% of replicates, which we score as the correct
+output: ``the evidence cannot answer this; here is the experiment.''
+
+\subsection{Abstention inherits the quality of the experiment it defers to}
+The advisor's largest residual losses are not its own estimates but the
+experiments it commissions: in the high-value packaging regime with no hidden
+confounding it abstains 43\% of the time, and the truncated A/B it defers to
+then chooses the destructive gate. Abstention is only as safe as the
+experiment design behind it --- specifying duration and surrogate outcomes is
+part of the advisor's job, not a hand-off.
+
+\section{Limitations}
+\label{sec:limitations}
+These results quantify decision quality \emph{inside a world we built}, and
+four caveats bound what they license. (1)~Simulator and methods were tuned by
+the same authors; the ACIC standard of generator/estimator separation
+\citep{hahn2019} is not met, and effect sizes (e.g.\ the frustration-churn
+coefficient) were calibrated to place regimes on opposite sides of the
+decision boundary. Semi-synthetic replication on real churn data is the
+necessary next step. (2)~The A/B test's packaging failure is driven by our
+choice of a 3-month window with naive extrapolation --- defensible as common
+practice, but a longer test or a surrogate-index design would close much of
+the gap, and that comparison is unrun. (3)~All methods share one stylized
+profit template, so we measure estimation-plus-abstention quality, not
+business-model quality; the template's experimentation costs use oracle
+quantities for accounting (not for decisions). (4)~The abstention rule is a
+leave-one-covariate-out heuristic, not a calibrated sensitivity analysis; the
+within-study evidence of \citet{young2026} suggests formal benchmarks are
+needed before trusting ``act'' verdicts in the wild.
+
+\section{Conclusion}
+On decisions a subscription business actually faces, the methods it actually
+uses are regime-gambles: naive analytics is catastrophic exactly when the
+profitable move is counterintuitive, and short A/B tests are catastrophic
+exactly when damage is slower than the test. A causal advisor that adjusts for
+what it can measure, prices what it cannot, and abstains to a \emph{specified}
+experiment is the only policy in our study that is never the worst --- which,
+for a business choosing a decision process before knowing its regime, is the
+property that matters. The advisor's value proposition is not ``better than an
+A/B test''; it is ``never the method that loses \$5 per user per year, and
+honest about when testing is unavoidable.''
+
+\begin{thebibliography}{14}
+
+\bibitem[Cadahia Delgado(2026)]{cadahia2026}
+P.~Cadahia Delgado.
+\newblock ACT, WAIT, or EXPERIMENT: A causal governance framework for retail
+  price optimization under abstentions.
+\newblock arXiv:2609.10615, 2026.
+
+\bibitem[Chernozhukov et al.(2018)]{chernozhukov2018}
+V.~Chernozhukov, D.~Chetverikov, M.~Demirer, E.~Duflo, C.~Hansen, W.~Newey,
+  and J.~Robins.
+\newblock Double/debiased machine learning for treatment and structural
+  parameters.
+\newblock \emph{The Econometrics Journal}, 21(1):C1--C68, 2018.
+
+\bibitem[Chou et al.(2026)]{chou2026}
+W.~Chou, A.~Alexandre, et al.
+\newblock A human-augmenting agentic workflow for observational causal
+  inference.
+\newblock arXiv:2607.22443, 2026.
+
+\bibitem[Colnet et al.(2024)]{colnet2024}
+B.~Colnet, I.~Mayer, G.~Chen, A.~Dieng, R.~Li, G.~Varoquaux, J.-P.~Vert,
+  J.~Josse, and S.~Yang.
+\newblock Causal inference methods for combining randomized trials and
+  observational studies: a review.
+\newblock \emph{Statistical Science}, 2024.
+
+\bibitem[Gordon et al.(2017)]{gordon2017}
+B.~R. Gordon, F.~Zettelmeyer, N.~Bhargava, and D.~Chapsky.
+\newblock A comparison of approaches to advertising measurement: Evidence from
+  big field experiments at Facebook.
+\newblock SSRN 3033144, 2017.
+
+\bibitem[Hahn et al.(2019)]{hahn2019}
+P.~R. Hahn, V.~Dorie, and J.~S. Murray.
+\newblock Atlantic Causal Inference Conference (ACIC) data analysis challenge
+  2017.
+\newblock arXiv:1905.09515, 2019.
+
+\bibitem[LaLonde(1986)]{lalonde1986}
+R.~J. LaLonde.
+\newblock Evaluating the econometric evaluations of training programs with
+  experimental data.
+\newblock \emph{American Economic Review}, 76(4):604--620, 1986.
+
+\bibitem[Paywalls and the Demand for News(2013)]{paywalls2013}
+Paywalls and the demand for news.
+\newblock \emph{Information Economics and Policy}, 25(2):61--69, 2013.
+
+\bibitem[UpliftBench(2026)]{fan2026}
+UpliftBench: Revealing outcome-regime and objective mismatch in uplift
+  evaluation.
+\newblock arXiv:2608.00915, 2026.
+
+\bibitem[Free-Trial Duration RCT(2025)]{trialduration2025}
+Longer or shorter? {A} large-scale randomized field experiment on the impact
+  of free trial duration on sustainable user conversion in the freemium model.
+\newblock \emph{Frontiers in Psychology}, 16:1568868, 2025.
+
+\bibitem[Effect Bound Decomposition(2026)]{effectbounds2026}
+Uncertainty-aware causal decision making via effect bound decomposition.
+\newblock arXiv:2601.22736, 2026.
+
+\bibitem[Young et al.(2026)]{young2026}
+J.~Young, M.~Ngatia, and E.~W. Dillon.
+\newblock Reevaluating causal estimation methods with data from a product
+  release.
+\newblock arXiv:2601.11845, 2026.
+
+\end{thebibliography}
+
+\appendix
+
+\section{Per-cell results}
+\label{app:cells}
+Full per-cell tables (every confounding level and history variant) are in the
+released per-replicate data (\texttt{packaging-results.csv},
+\texttt{pricing-results.csv}); headline per-cell numbers appear in the run
+logs. Two cells deserve note. Packaging, $\tau_x{=}8$, $c{=}0$: the advisor's
+accuracy drops to 0.60 \emph{because} it abstains 43\% of the time and the
+truncated A/B it defers to is wrong (Section~5.4). Pricing, elastic demand
+with no historical variation: naive accuracy is 0.00 at \$2{,}860--\$5{,}446
+regret while the advisor abstains 100\% and inherits the A/B's correct verdict
+at ${\sim}\$240$--\$454 --- the clearest single illustration of the thesis.
+
+\section{Reproducibility}
+\label{app:repro}
+The simulator, methods, runner, and sanity checks (oracle-sign consistency of
+the shared profit template in every regime; unconfounded-recovery checks) are
+in the project repository; experiments are tracked as frozen branches
+(packaging baseline and pricing child), each answered by a single logged run
+(IDs \texttt{9e9cde5b}, \texttt{06bd0de4}). All randomness is seeded per
+replicate; the oracle uses common random numbers across policies.
+
+\end{document}

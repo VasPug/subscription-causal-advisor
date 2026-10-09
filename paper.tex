@@ -21,7 +21,7 @@
 \titleformat{\subsection}{\normalsize\sffamily\bfseries\color{dmblue}}{\thesubsection.}{0.6em}{}
 \titleformat{\paragraph}[runin]{\sffamily\bfseries}{}{0em}{}[.]
 \captionsetup{font=small,labelfont={bf,color=dmblue}}
-\setlength{\parskip}{2pt}
+\setlength{\parskip}{1pt}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -58,9 +58,8 @@ a three month A/B test, fails when damage arrives more slowly than the
 test: it approves a harmful paywall in 97 percent of those runs, losing
 \$5{,}380 per thousand users per year, worse than doing no analysis at all.
 The advisor is never the worst policy in any situation and correctly asks
-for an experiment when history contains no signal. Its value is not
-accuracy against a good test. It is avoiding the big mistakes, and knowing
-when a test is truly needed.
+for an experiment when history contains no signal. Its value is avoiding
+the big mistakes, and knowing when a test is truly needed.
 \end{abstract}
 
 \section{Introduction}
@@ -87,10 +86,8 @@ This paper asks whether a \emph{causal advisor}
 data the company already has, adjusts for differences it can measure, and
 checks whether the recommendation survives its uncertainty. If it does,
 the advisor recommends the action; if not, it asks for a specific
-experiment. The
-design follows \citet{cadahia2026}, who built a similar gate for retail
-pricing. We score it against all three things businesses actually do:
-nothing, dashboards, and the occasional short A/B test.
+experiment. The design follows \citet{cadahia2026}, who built a similar
+gate for retail pricing.
 
 Real data cannot answer that, because it never shows what the other choice
 would have done. Following the logic of the ACIC benchmarks \citep{hahn2019},
@@ -102,11 +99,11 @@ profit lost, over 30 repetitions of every setting.
 \begin{tikzpicture}[
   font=\footnotesize\sffamily,
   box/.style={draw, rounded corners=2pt, align=center, inner sep=4pt,
-              minimum height=8mm, fill=gray!8},
+              minimum height=7mm, fill=gray!8},
   dec/.style={draw, rounded corners=2pt, align=center, inner sep=4pt,
-              minimum height=8mm, fill=dmblue!12},
+              minimum height=7mm, fill=dmblue!12},
   act/.style={draw, rounded corners=2pt, align=center, inner sep=4pt,
-              minimum height=8mm, fill=orange!20},
+              minimum height=7mm, fill=orange!20},
   arr/.style={-{Stealth[length=2mm]}, thick}]
 \node[box] (data) {Company's own\\historical data};
 \node[box, right=8mm of data] (est) {Adjusted estimate\\of the effect};
@@ -196,7 +193,7 @@ feature, and it is logic, not learning.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.92\linewidth]{figs/estimates-vs-truth.pdf}
+  \includegraphics[width=0.88\linewidth]{figs/estimates-vs-truth.pdf}
   \caption{\textbf{Why the naive comparison gets fooled, and how much the advisor
   fixes.} \textbf{(a)}~Paywall: estimated dollar value of the feature vs.\
   the hidden-bias dial (mean over both worlds, 95 percent intervals, 30
@@ -210,7 +207,7 @@ feature, and it is logic, not learning.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.92\linewidth]{figs/regret-by-regime.pdf}
+  \includegraphics[width=0.88\linewidth]{figs/regret-by-regime.pdf}
   \caption{\textbf{Every method except the advisor has a situation that
   ruins it.} Profit lost per thousand users per year (95 percent intervals,
   30 repetitions). \textbf{(a)}~Paywall: the naive comparison never locks, missing
@@ -279,12 +276,10 @@ decision flips inside its uncertainty range, including every run where the
 price had never changed. It posts the lowest overall regret in both
 decisions (Table~\ref{tab:overall}), and its worst situation (\$1{,}976)
 is safer than the naive comparison's (\$2{,}689) and far safer than the
-A/B test's (\$5{,}380). The do-nothing policy is a serious benchmark, not
-a strawman: on the paywall it coincides with the naive comparison (neither
-ever locks), and in pricing its \$312 regret nearly matches the A/B test's
-\$323, since inaction is free and half the worlds punish action. The
-advisor beats it in both decisions by capturing the profitable changes
-inertia forfeits. The advisor's own weak spot is the bias it cannot see:
+A/B test's (\$5{,}380). The do-nothing policy is a serious benchmark: on the
+paywall it coincides with the naive comparison, and in pricing its \$312
+regret nearly matches the A/B test's \$323; the advisor beats both by
+capturing the changes inertia forfeits. The advisor's own weak spot is the bias it cannot see:
 its uncertainty range covers sampling noise but not hidden confounding, so
 as the hidden-bias dial rises in the locking-pays world its estimate
 drifts across the decision boundary and, at the strongest setting, it
@@ -294,21 +289,18 @@ gives the same wrong answer as the naive comparison.
 These numbers show a pattern, not what any real company would measure. We
 tuned both the simulator and the methods, with no separation between test
 maker and test taker \citep{hahn2019}; the A/B failure follows from the
-short window and crude scale-up we gave it, and a longer test or better
-early indicators would close much of that gap; all methods share one
-simplified profit formula; and the advisor's abstention covers only
-statistical uncertainty, leaving hidden confounding unguarded, which is
-where formal sensitivity analysis would slot in \citep{chernozhukov2018};
-even careful adjustment can miss \citep{young2026}. Semi-synthetic
-replication on real subscription data is the next step.
+short window and crude scale-up we chose; all methods share one simplified
+profit formula; and the advisor's abstention covers only statistical
+uncertainty, leaving hidden confounding unguarded, where formal
+sensitivity analysis would slot in \citep{chernozhukov2018}, since even
+careful adjustment can miss \citep{young2026}. Semi-synthetic replication
+on real subscription data is the next step.
 
-The conclusion the study supports: what businesses do today, whether
-reading dashboards, running short tests, or changing nothing, is a gamble
-on which world they live in, each approach disastrous in a situation
-another survives. The causal advisor, which adjusts for what it can measure
-and asks for an experiment when the answer is not solid, was never the worst
-option. That is the honest pitch: never the method that quietly loses
-five dollars per user per year.
+In short: dashboards, short tests, and doing nothing are each a gamble on
+which world the business lives in, and each is disastrous somewhere. The
+advisor, which adjusts for what it can measure and asks for an experiment
+otherwise, was never the worst option: never the method that quietly
+loses five dollars per user per year.
 
 \begin{thebibliography}{6}
 

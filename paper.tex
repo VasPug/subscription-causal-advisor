@@ -182,14 +182,15 @@ like machine learning. First, it \emph{estimates the effect} by comparing
 like with like: a small statistical model learns who tends to adopt the
 feature, so adopters are measured against non-adopters who look the same on
 everything the company can observe (for pricing, a demand model that
-controls for the time trend and seasonality). Second, it turns the point
-estimate into an \emph{uncertainty range}, from re-estimation on resampled
-data or the fitted model's standard errors. Third, a \emph{decision rule}:
-if the recommendation holds everywhere inside the range, act on it; if it
-flips anywhere, or if the question is unanswerable from history (the price
-never varied), refuse and output the specific experiment that would settle
-it. Nothing is trained end to end; the refusal step is the defining
-feature, and it is logic, not learning.
+controls for the time trend and seasonality). Second, it works out how far
+off that estimate could be from chance alone, turning the single number
+into a \emph{range of plausible values}. Third, the \emph{decision rule}:
+if every value in the range points to the same action, take it. If some
+values say gate and others say keep, or the history simply cannot answer
+the question (the price never changed), the advisor refuses and instead
+describes the experiment that would settle it. The refusal step is what
+makes it an advisor rather than a model: it is a rule, not something
+learned.
 
 \begin{figure}[t]
   \centering

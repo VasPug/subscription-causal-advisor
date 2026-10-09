@@ -108,6 +108,23 @@ regimes a business cannot distinguish in advance?'' On that question the
 advisor dominates: it is the only method of the three that is never the worst,
 and it knows when it does not know.
 
+\paragraph{Contributions}
+\begin{itemize}\setlength\itemsep{1pt}
+  \item A ground-truth subscription simulator (packaging + pricing levers,
+    dialable unobservable confounding, an oracle pricing every decision in
+    dollars) and a regret-based evaluation protocol for monetization decision
+    policies (Sections~\ref{sec:sim}--\ref{sec:methods}).
+  \item Evidence that the two incumbent policies fail in complementary,
+    predictable regimes: naive analytics loses \$2{,}689--\$2{,}507 per
+    1{,}000 per year exactly where the profitable move is counterintuitive;
+    a 3-month A/B test loses \$5{,}380 where damage outlasts the test window
+    (Section~\ref{sec:results}).
+  \item Evidence that an advisor with an explicit abstention rule is never
+    the worst method in any regime (worst-regime regret $2.4$--$4.9\times$
+    lower), and the corollary that abstention is only as safe as the
+    experiment it defers to (Section~5.4).
+\end{itemize}
+
 \section{Related work}
 \paragraph{Validating observational methods against experiments}
 \citet{lalonde1986} initiated the within-study comparison literature;
@@ -242,7 +259,8 @@ for the \emph{short-window} effect; its failure mode is the extrapolation.
 \caption{\textbf{Packaging decision} (12{,}000 users, 30 replicates per cell;
 regimes aggregate four confounding levels). Regret in \$ per 1{,}000 users per
 year; ``abst.''\ is the advisor's abstention rate (abstention defers to the
-A/B test and pays its costs).}
+A/B test and pays its costs). 95\% CIs for the regret column appear in
+Figure~\ref{fig:regret}a.}
 \label{tab:packaging}
 \small
 \begin{tabular}{llrrr}
@@ -271,7 +289,8 @@ Regime & Method & Accuracy & Regret & Abst. \\
 \centering
 \caption{\textbf{Pricing decision} (36-month history, 30 replicates per cell;
 regimes aggregate drift levels and whether price ever varied historically).
-Regret in \$ per 1{,}000 signups per year.}
+Regret in \$ per 1{,}000 signups per year; 95\% CIs appear in
+Figure~\ref{fig:regret}b.}
 \label{tab:pricing}
 \small
 \begin{tabular}{llrrr}
@@ -444,6 +463,20 @@ J.~Young, M.~Ngatia, and E.~W. Dillon.
 \end{thebibliography}
 
 \appendix
+
+\section{Compute and LLM disclosure}
+\label{app:compute}
+All experiments run on CPU on a single commodity Linux machine: the packaging
+run (480 oracle-scored replicates, 80-draw bootstraps) completes in 80
+seconds; the pricing run in 6 seconds; total project compute is under five
+CPU-minutes. The environment is a Python~3.14 virtual environment with NumPy
+2.5.3 as the only dependency, recreated from the committed
+\texttt{requirements.txt} by the fixed run command \texttt{bash run.sh}.
+
+This paper was drafted by an LLM research agent (Claude, Anthropic) operating
+the simulator, estimators, and literature-retrieval tooling, with the human
+author directing the research question, scope, and iterations; all reported
+numbers are read from logged runs rather than generated text.
 
 \section{Per-cell results}
 \label{app:cells}

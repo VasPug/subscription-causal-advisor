@@ -66,8 +66,8 @@ the big mistakes, and knowing when a test is truly needed.
 A software product with a free tier and a paid tier faces two recurring
 questions. If we lock feature X behind the paid tier, do we gain upgrades or
 just lose users? If we raise the price 20 percent, does revenue go up or
-down? Start with how these decisions are actually made, because it is not
-the textbook answer. Randomized tests are rare in practice: even among
+down? Start with how these decisions are actually made. Randomized tests
+are rare in practice: even among
 high-technology startups relatively few firms adopt A/B testing at all
 \citep{koning2022}, and most large US retail chains do not vary prices even
 across very different markets, a pattern attributed to managerial inertia
@@ -173,12 +173,11 @@ percent of users, three months for the paywall, two months for pricing, and
 the short-term result scaled to a full year. The randomization is honest;
 the scaling is the risk.
 
-\paragraph{Causal advisor} The advisor is not a prediction model. A
-prediction model learns patterns in the data as it is, and the pattern
-``feature X users convert three times more'' is true while saying nothing
-about what happens if you lock the feature. The advisor instead tries to
-answer the intervention question in three steps, and only the first looks
-like machine learning. First, it \emph{estimates the effect} by comparing
+\paragraph{Causal advisor} A prediction model learns patterns in the data
+as it is, and the pattern ``feature X users convert three times more''
+says nothing about what happens if you lock the feature. The advisor
+answers the intervention question instead, in three steps, and only the
+first looks like machine learning. First, it \emph{estimates the effect} by comparing
 like with like: a small statistical model learns who tends to adopt the
 feature, so adopters are measured against non-adopters who look the same on
 everything the company can observe (for pricing, a demand model that
@@ -188,9 +187,8 @@ into a \emph{range of plausible values}. Third, the \emph{decision rule}:
 if every value in the range points to the same action, take it. If some
 values say gate and others say keep, or the history simply cannot answer
 the question (the price never changed), the advisor refuses and instead
-describes the experiment that would settle it. The refusal step is what
-makes it an advisor rather than a model: it is a rule, not something
-learned.
+describes the experiment that would settle it. This refusal step is the
+defining feature, and it is a fixed rule the advisor always applies.
 
 \begin{figure}[t]
   \centering
@@ -199,7 +197,7 @@ learned.
   fixes.} \textbf{(a)}~Paywall: estimated dollar value of the feature vs.\
   the hidden-bias dial (mean over both worlds, 95 percent intervals, 30
   repetitions). The naive comparison reads \$17--18 when the truth is about \$5;
-  the advisor removes most, not all, of the gap. \textbf{(b)}~Pricing: error
+  the advisor removes most of the gap. \textbf{(b)}~Pricing: error
   in estimated price sensitivity when the past change coincided with an
   improving product. Before/after is off by $-0.35$; the trend-controlled
   advisor stays near zero.}
@@ -287,7 +285,8 @@ drifts across the decision boundary and, at the strongest setting, it
 gives the same wrong answer as the naive comparison.
 
 \section{Limitations and conclusion}
-These numbers show a pattern, not what any real company would measure. We
+These numbers show a pattern inside a world we built; no real company
+would measure them. We
 tuned both the simulator and the methods, with no separation between test
 maker and test taker \citep{hahn2019}; the A/B failure follows from the
 short window and crude scale-up we chose; all methods share one simplified

@@ -35,7 +35,7 @@ def main():
             truth[float(r["conf"])].append(float(r["tau_true"]))
     confs = sorted(truth)
     ax = axes[0]
-    for m, label in [("naive", "Dashboard"), ("advisor", "Advisor")]:
+    for m, label in [("naive", "Naive comparison"), ("advisor", "Advisor")]:
         mu = [mean_ci(est[m][c])[0] for c in confs]
         hw = [mean_ci(est[m][c])[1] for c in confs]
         ax.errorbar(confs, mu, yerr=hw, marker="o", capsize=2,
@@ -58,7 +58,7 @@ def main():
     drifts = sorted(err["naive"])
     x = np.arange(len(drifts))
     w = 0.35
-    for i, (m, label) in enumerate([("naive", "Dashboard"), ("advisor", "Advisor")]):
+    for i, (m, label) in enumerate([("naive", "Naive comparison"), ("advisor", "Advisor")]):
         mu = [mean_ci(err[m][d])[0] for d in drifts]
         hw = [mean_ci(err[m][d])[1] for d in drifts]
         bars = ax.bar(x + (i - 0.5) * w, mu, w, yerr=hw, capsize=2,

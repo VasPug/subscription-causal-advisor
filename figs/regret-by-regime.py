@@ -9,7 +9,7 @@ from collections import defaultdict
 import numpy as np
 from orx_figstyle import PALETTE, MUTED, TEXT, figure_grid, panel_labels, save, use_style
 
-METHODS = [("naive", "Dashboard"), ("ab", "A/B test"),
+METHODS = [("naive", "Naive comparison"), ("ab", "A/B test"),
            ("advisor", "Causal advisor")]
 COLORS = {"naive": MUTED, "ab": PALETTE["blue"], "advisor": PALETTE["red"]}
 

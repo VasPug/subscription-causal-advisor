@@ -50,8 +50,8 @@ company's own historical data, corrects for the biases it can see, and asks
 for an experiment when the data cannot support a conclusion. We score all
 three inside a simulated subscription business where the true effect of every
 change is known, measuring the profit each method's decisions lose. Each
-incumbent has a situation that ruins it. The dashboard fails when the right
-move looks wrong on the surface. The short A/B test fails when the damage
+incumbent has a situation that ruins it. The naive comparison fails when the
+right move looks wrong on the surface. The short A/B test fails when the damage
 arrives more slowly than the test: it approves a harmful paywall in 97
 percent of those runs, losing \$5{,}380 per thousand users per year, worse
 than doing no analysis at all. The advisor is never the worst method in any
@@ -130,8 +130,8 @@ strongly the unobserved taste factor also drives adoption. Locking cuts both
 ways: some users pay to unlock, others get frustrated and quit over the
 following months. We run two worlds: one where the feature is mildly useful
 and locking earns about \$2.70 per user per year, one where it is a core
-reason people stay and locking loses about \$5.50. The dashboard reads
-almost the same in both.
+reason people stay and locking loses about \$5.50. The naive comparison reads almost the
+same in both worlds.
 
 \paragraph{Decision two: raise the price 20 percent} The business has three
 years of signup history and considers moving from \$10 to \$12. In some runs
@@ -148,7 +148,8 @@ thousand users per year.
 \section{The three methods}
 All three feed their estimate into the same simple profit formula; they
 differ only in evidence quality and willingness to say ``not yet.''
-\textbf{Dashboard}: compare adopters with non-adopters; for pricing, compare
+\textbf{Naive comparison}: take the dashboard
+numbers at face value: compare adopters with non-adopters; for pricing, compare
 conversion before and after the old change, and if price never changed,
 assume demand will not react. \textbf{Causal advisor}: compare adopters with
 statistically similar non-adopters; for pricing, fit a demand model
@@ -163,10 +164,10 @@ the scaling is the risk.
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.92\linewidth]{figs/estimates-vs-truth.pdf}
-  \caption{\textbf{Why the dashboard gets fooled, and how much the advisor
+  \caption{\textbf{Why the naive comparison gets fooled, and how much the advisor
   fixes.} \textbf{(a)}~Paywall: estimated dollar value of the feature vs.\
   the hidden-bias dial (mean over both worlds, 95 percent intervals, 30
-  repetitions). The dashboard reads \$17--18 when the truth is about \$5;
+  repetitions). The naive comparison reads \$17--18 when the truth is about \$5;
   the advisor removes most, not all, of the gap. \textbf{(b)}~Pricing: error
   in estimated price sensitivity when the past change coincided with an
   improving product. Before/after is off by $-0.35$; the trend-controlled
@@ -179,9 +180,9 @@ the scaling is the risk.
   \includegraphics[width=0.92\linewidth]{figs/regret-by-regime.pdf}
   \caption{\textbf{Every method except the advisor has a situation that
   ruins it.} Profit lost per thousand users per year (95 percent intervals,
-  30 repetitions). \textbf{(a)}~Paywall: the dashboard never locks, missing
+  30 repetitions). \textbf{(a)}~Paywall: the naive comparison never locks, missing
   the profitable paywall; the three month A/B test misses slow churn damage
-  and approves the harmful one. \textbf{(b)}~Pricing: the dashboard raises
+  and approves the harmful one. \textbf{(b)}~Pricing: the naive comparison raises
   into price-sensitive demand; the A/B test does well because pricing
   feedback is fast.}
   \label{fig:regret}
@@ -203,22 +204,22 @@ Figure~\ref{fig:regret}.}
 Decision & Method & Accuracy & Regret (\$/1k/yr) & Asked for test \\
 \midrule
 \multirow{3}{*}{Paywall}
- & dashboard & 0.50 & 1{,}345 & \\
+ & naive & 0.50 & 1{,}345 & \\
  & A/B test  & 0.51 & 2{,}992 & \\
  & advisor   & \textbf{0.83} & \textbf{873} & 44\% \\
 \midrule
 \multirow{3}{*}{Pricing}
- & dashboard & 0.68 & 1{,}268 & \\
+ & naive & 0.68 & 1{,}268 & \\
  & A/B test  & 0.88 & 323 & \\
  & advisor   & \textbf{0.90} & \textbf{239} & 72\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{The dashboard fails when the right move looks wrong}
+\paragraph{The naive comparison fails when the right move looks wrong}
 Figure~\ref{fig:bias}a shows the mechanism: the raw adopter comparison
 overrates the feature by roughly a factor of three at every level of the
-hidden-bias dial. Convinced the feature is precious, the dashboard never
+hidden-bias dial. Convinced the feature is precious, it never
 locks it, which is exactly wrong in the world where locking pays (\$2{,}689
 lost per thousand users per year, Figure~\ref{fig:regret}a). In pricing, the
 misread elasticity (Figure~\ref{fig:bias}b) plus the ``demand won't react''
@@ -241,7 +242,7 @@ to choose correctly most of the time, and its stress test converts many
 remaining dangerous calls into ``run an experiment,'' including every run
 where the price had never changed. It posts the lowest overall regret in
 both decisions (Table~\ref{tab:overall}), and its worst situation
-(\$1{,}101) is far safer than the dashboard's (\$2{,}689) or the A/B test's
+(\$1{,}101) is far safer than the naive comparison's (\$2{,}689) or the A/B test's
 (\$5{,}380). One surprise: when the advisor declines the paywall question it
 hands the decision to the A/B test, which is usually wrong in the world
 where locking backfires, so the advisor inherits part of that error. Asking

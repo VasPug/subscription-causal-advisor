@@ -4,7 +4,7 @@ import numpy as np
 from sim import decide_from_tau
 
 
-def logit_fit(X, y, l2=1e-3, iters=60):
+def logit_fit(X, y, l2=1e-3, iters=60, with_cov=False):
     Xb = np.column_stack([np.ones(len(X)), X])
     w = np.zeros(Xb.shape[1])
     for _ in range(iters):
@@ -15,6 +15,8 @@ def logit_fit(X, y, l2=1e-3, iters=60):
         w -= step
         if np.abs(step).max() < 1e-8:
             break
+    if with_cov:
+        return w, np.linalg.inv(H)
     return w
 
 
@@ -57,17 +59,12 @@ def advisor(data, rng, n_boot=80):
         att_tau(X, D, Y, idx=rng.integers(0, n, n)) for _ in range(n_boot)
     ])
     lo, hi = np.quantile(boots, [0.025, 0.975])
-    # sensitivity: how much does tau move if we lose the most load-bearing
-    # covariate? treat that as the plausible scale of leftover hidden bias.
-    shifts = [abs(att_tau(X, D, Y, drop_col=j) - tau_hat) for j in range(X.shape[1])]
-    sens = max(shifts)
-    lo_s, hi_s = lo - sens, hi + sens
-    gate_lo, _ = decide_from_tau(lo_s, data)
-    gate_hi, _ = decide_from_tau(hi_s, data)
+    gate_lo, _ = decide_from_tau(lo, data)
+    gate_hi, _ = decide_from_tau(hi, data)
     if gate_lo != gate_hi:  # decision flips within uncertainty -> ask for an experiment
-        return dict(tau_hat=tau_hat, ci=(lo, hi), sens=sens, action="experiment")
+        return dict(tau_hat=tau_hat, ci=(lo, hi), action="experiment")
     gate, _ = decide_from_tau(tau_hat, data)
-    return dict(tau_hat=tau_hat, ci=(lo, hi), sens=sens,
+    return dict(tau_hat=tau_hat, ci=(lo, hi),
                 action="gate" if gate else "keep")
 
 

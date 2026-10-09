@@ -115,14 +115,12 @@ def advisor_pricing(hist, seed):
     if not changed.any():
         return dict(b_hat=float("nan"), action="experiment")  # no identification
     X = np.column_stack([hist["price"] - P0, hist["t"] / 12.0, hist["season"]])
-    w = logit_fit(X, hist["conv"])
+    w, cov = logit_fit(X, hist["conv"], with_cov=True)
     b_hat = -w[1]
-    # sensitivity: without the trend control the estimate absorbs the q drift
-    w_nt = logit_fit(X[:, [0, 2]], hist["conv"])
-    shift = abs(-w_nt[1] - b_hat)
+    se = float(np.sqrt(cov[1, 1]))
     conv_now = recent_conv(hist)
-    d_lo = profit_per_signup(b_hat + shift, None, conv_now, seed)
-    d_hi = profit_per_signup(max(b_hat - shift, 0.0), None, conv_now, seed)
+    d_lo = profit_per_signup(b_hat + 1.96 * se, None, conv_now, seed)
+    d_hi = profit_per_signup(max(b_hat - 1.96 * se, 0.0), None, conv_now, seed)
     if (d_lo > 0) != (d_hi > 0):
         return dict(b_hat=b_hat, action="experiment")
     d = profit_per_signup(b_hat, None, conv_now, seed)

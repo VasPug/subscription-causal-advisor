@@ -13,7 +13,7 @@ import sim
 from methods import naive, advisor, ab_test
 
 CFG = dict(
-    experiment="pricing",
+    experiment="both",
     n_users=12000,
     replicates=30,
     tau_x_grid=[1.0, 8.0],          # feature value: low (gate likely pays) vs high
@@ -64,7 +64,7 @@ def run_pricing():
                             b_hat=res.get("b_hat", float("nan")),
                             delta_true=delta_true,
                         ))
-    with open("results.csv", "w", newline="") as f:
+    with open("results-pricing.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)
@@ -108,10 +108,11 @@ def run_pricing():
 def main():
     t0 = time.time()
     print("CONFIG " + json.dumps(CFG))
-    if CFG["experiment"] == "pricing":
+    if CFG["experiment"] in ("pricing", "both"):
         run_pricing()
-        print(f"done in {time.time() - t0:.0f}s")
-        return
+        if CFG["experiment"] == "pricing":
+            print(f"done in {time.time() - t0:.0f}s")
+            return
     rows = []
     for tau_x in CFG["tau_x_grid"]:
         for conf in CFG["conf_grid"]:
@@ -144,7 +145,7 @@ def main():
                         delta_true=orc["delta_true"],
                     ))
 
-    with open("results.csv", "w", newline="") as f:
+    with open("results-packaging.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)

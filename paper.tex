@@ -43,175 +43,159 @@ When Should a Subscription Business Trust Causal Inference Instead of an A/B Tes
 
 \begin{abstract}
 \noindent
-A subscription business faces two common decisions. Should a feature go
-behind the paywall, and should the price go up? Most teams decide with simple
-dashboard comparisons. Some run A/B tests. We compare both against a third
-option, a causal advisor: it estimates the effect of the change from the
-company's own historical data, corrects for the biases it can see, and when
-the data cannot support a conclusion it refuses to answer and asks for an
-experiment instead. To compare the three fairly we build a simulated
-subscription business where the true effect of every change is known, and we
-measure how much profit each method's decisions lose. The dashboard fails
-when the right move looks wrong on the surface, losing up to \$2{,}700 per
-thousand users per year. A three month A/B test fails when the damage from a
-change arrives slowly: it approves a harmful paywall in 97 percent of those
-runs, losing \$5{,}380 per thousand users per year, worse than doing no
-analysis at all. The advisor is never the worst method in any situation, and
-it correctly says ``run an experiment'' when the history contains no useful
-signal. Its value is not beating A/B tests on accuracy. Its value is
-avoiding the big mistakes, and knowing when a test is truly needed.
+Subscription businesses decide what to paywall and what to charge using
+dashboard comparisons, and sometimes A/B tests. We compare both against a
+causal advisor: a method that estimates the effect of a change from the
+company's own historical data, corrects for the biases it can see, and asks
+for an experiment when the data cannot support a conclusion. We score all
+three inside a simulated subscription business where the true effect of every
+change is known, measuring the profit each method's decisions lose. Each
+incumbent has a situation that ruins it. The dashboard fails when the right
+move looks wrong on the surface. The short A/B test fails when the damage
+arrives more slowly than the test: it approves a harmful paywall in 97
+percent of those runs, losing \$5{,}380 per thousand users per year, worse
+than doing no analysis at all. The advisor is never the worst method in any
+situation and correctly asks for an experiment when history contains no
+signal. Its value is not accuracy against a good test. It is avoiding the big
+mistakes, and knowing when a test is truly needed.
 \end{abstract}
 
 \section{Introduction}
-Imagine a software product with a free tier and a paid tier. The team wants
-to know two things. If we lock feature X behind the paid tier, do we gain
-upgrades or just lose users? And if we raise the price 20 percent, does
-revenue go up or down?
-
-The usual way to answer is a dashboard. ``Users of feature X upgrade three
-times more often, so the feature must be valuable.'' Or ``we raised the price
-last year and conversion did not drop.'' Both readings are misleading.
-Engaged users upgrade more whether or not the feature causes it. And
-businesses tend to raise prices when things are already going well, so the
-price change gets credit for growth it did not create.
-
-The textbook fix is a randomized test. But price tests upset customers, and
-tests of retention need a long time, because churn builds up slowly. A short
-test can look clean and still point the wrong way.
+A software product with a free tier and a paid tier faces two recurring
+questions. If we lock feature X behind the paid tier, do we gain upgrades or
+just lose users? If we raise the price 20 percent, does revenue go up or
+down? The usual answers come from a dashboard: ``users of feature X upgrade
+three times more often'' or ``conversion did not drop after our last price
+increase.'' Both readings are confounded. Engaged users upgrade more whether
+or not the feature causes it, and businesses raise prices when things are
+already going well, so the change gets credit for growth it did not create.
+The textbook fix, a randomized test, is often impractical: price tests upset
+customers, and retention effects need months to show up, so a short test can
+look clean and still point the wrong way.
 
 This paper studies a middle path, a \emph{causal advisor}
 (Figure~\ref{fig:flow}). It uses the data the company already has, adjusts
-for the user differences it can measure, and stress tests its answer against
-what it cannot measure. If the decision survives, it recommends an action.
-If not, it asks for a specific experiment. The design follows
-\citet{cadahia2026}, who built a similar gate for retail pricing. Our
-question is whether this policy makes better decisions than the two things
-businesses do today.
+for differences it can measure, and stress tests the answer against what it
+cannot. If the decision survives, it recommends an action; if not, it asks
+for a specific experiment. The design follows \citet{cadahia2026}, who built
+a similar gate for retail pricing. Our question: does this policy beat the
+two things businesses actually do?
 
 Real data cannot answer that, because it never shows what the other choice
-would have done. So, following the logic of the ACIC benchmarks
-\citep{hahn2019}, we build a simulation where the truth is known and score
-every method on profit lost, over 30 repetitions of every setting.
+would have done. Following the logic of the ACIC benchmarks \citep{hahn2019},
+we build a simulation where the truth is known and score every method on
+profit lost, over 30 repetitions of every setting.
 
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
-  font=\small\sffamily,
-  box/.style={draw, rounded corners=2pt, align=center, inner sep=5pt,
-              minimum height=9mm, fill=gray!8},
-  dec/.style={draw, rounded corners=2pt, align=center, inner sep=5pt,
-              minimum height=9mm, fill=dmblue!12},
-  act/.style={draw, rounded corners=2pt, align=center, inner sep=5pt,
-              minimum height=9mm, fill=orange!20},
+  font=\footnotesize\sffamily,
+  box/.style={draw, rounded corners=2pt, align=center, inner sep=4pt,
+              minimum height=8mm, fill=gray!8},
+  dec/.style={draw, rounded corners=2pt, align=center, inner sep=4pt,
+              minimum height=8mm, fill=dmblue!12},
+  act/.style={draw, rounded corners=2pt, align=center, inner sep=4pt,
+              minimum height=8mm, fill=orange!20},
   arr/.style={-{Stealth[length=2mm]}, thick}]
 \node[box] (data) {Company's own\\historical data};
-\node[box, right=9mm of data] (est) {Adjusted estimate\\of the effect};
-\node[dec, right=9mm of est] (gate) {Does the decision survive\\uncertainty + stress tests?};
-\node[act, right=11mm of gate, yshift=7mm] (go) {Recommend\\the action};
-\node[act, right=11mm of gate, yshift=-7mm] (exp) {Specify an\\experiment};
+\node[box, right=8mm of data] (est) {Adjusted estimate\\of the effect};
+\node[dec, right=8mm of est] (gate) {Does the decision survive\\uncertainty + stress tests?};
+\node[act, right=10mm of gate, yshift=6.5mm] (go) {Recommend\\the action};
+\node[act, right=10mm of gate, yshift=-6.5mm] (exp) {Specify an\\experiment};
 \draw[arr] (data) -- (est);
 \draw[arr] (est) -- (gate);
-\draw[arr] (gate.east) -- node[above, sloped, font=\footnotesize]{yes} (go.west);
-\draw[arr] (gate.east) -- node[below, sloped, font=\footnotesize]{no} (exp.west);
+\draw[arr] (gate.east) -- node[above, sloped, font=\scriptsize]{yes} (go.west);
+\draw[arr] (gate.east) -- node[below, sloped, font=\scriptsize]{no} (exp.west);
 \end{tikzpicture}
 \caption{\textbf{The causal advisor.} It acts only when the recommendation
-would survive both its statistical uncertainty and a stress test for hidden
-bias. Otherwise its output is a concrete experiment request.}
+survives both statistical uncertainty and a stress test for hidden bias;
+otherwise it outputs a concrete experiment request.}
 \label{fig:flow}
 \end{figure}
 
 \section{The simulated business}
-We simulate a freemium product month by month over one year. Free users
-bring in \$2 per month from ads; the paid tier costs \$10 per month. Each
-simulated user has an engagement level, a willingness to pay, and a hidden
-taste factor that no method ever observes. Engaged users use the product
-more, stay longer, and upgrade more. Because we control the simulation, we
-can replay the same world under both choices and read off the true profit
-difference. The methods only see what a real company would: noisy user
-attributes, feature usage, upgrades, cancellations, and revenue.
+We simulate a freemium product month by month over one year: free users
+bring in \$2 per month from ads, the paid tier costs \$10 per month. Each
+user has an engagement level, a willingness to pay, and a hidden taste
+factor no method ever observes. Engaged users use more, stay longer, and
+upgrade more. Because we control the simulation, we can replay the same
+world under both choices and read off the true profit difference. The
+methods see only what a real company would: noisy user attributes, feature
+usage, upgrades, cancellations, revenue.
 
 \paragraph{Decision one: lock a feature behind the paywall} Feature X is
-currently free, and heavier users adopt it more, so adopters look great on
-any dashboard even when the feature itself does little. A hidden-bias dial
-controls how strongly the unobserved taste factor also drives adoption.
-Locking the feature cuts both ways: some users pay to unlock it, others get
-frustrated and quit over the following months. We run two worlds. In one the
-feature is mildly useful and locking it earns about \$2.70 per user per
-year. In the other it is a core reason people stay, and locking it loses
-about \$5.50 per user per year. The dashboard reads almost the same in both.
+free today, and heavier users adopt it more, so adopters look great on any
+dashboard even when the feature does little. A hidden-bias dial controls how
+strongly the unobserved taste factor also drives adoption. Locking cuts both
+ways: some users pay to unlock, others get frustrated and quit over the
+following months. We run two worlds: one where the feature is mildly useful
+and locking earns about \$2.70 per user per year, one where it is a core
+reason people stay and locking loses about \$5.50. The dashboard reads
+almost the same in both.
 
 \paragraph{Decision two: raise the price 20 percent} The business has three
-years of signup history and considers raising the price from \$10 to \$12.
-In some runs it once raised the price in the past, right when the product
-was improving, which makes before and after comparisons misleading. In other
-runs the price never changed, so history says nothing about price
-sensitivity. Demand is either insensitive (the raise earns money) or
-sensitive (the raise loses money).
+years of signup history and considers moving from \$10 to \$12. In some runs
+it raised the price once before, right when the product was improving, which
+poisons before/after comparisons; in others the price never changed, so
+history says nothing about price sensitivity. Demand is either insensitive
+(the raise earns) or sensitive (the raise loses).
 
-\paragraph{Scoring} Each method picks an action. Since the truth is known,
-its \emph{regret} is the profit it gave up by choosing wrong, plus any real
-testing costs it chose to pay (test users exposed to the worse option, and
-the wait for results). We report dollars lost per thousand users per year.
+\paragraph{Scoring} Each method picks an action. Its \emph{regret} is the
+profit given up by choosing wrong, plus any real testing costs it chose to
+pay (test users on the worse option, waiting for results), in dollars per
+thousand users per year.
 
 \section{The three methods}
-All three feed their estimate into the same simple profit formula, so they
-differ only in evidence quality and in their willingness to say ``not yet.''
-
-\paragraph{Dashboard} Compare profit of feature adopters vs.\ non-adopters;
-for pricing, compare conversion before and after the old change. If the
-price never changed, assume demand will not react, as industry benchmarks
-suggest.
-
-\paragraph{Causal advisor} Compare adopters with statistically similar
-non-adopters using the measured attributes; for pricing, fit a demand model
-that controls for trend and seasonality. Then stress test: widen the
+All three feed their estimate into the same simple profit formula; they
+differ only in evidence quality and willingness to say ``not yet.''
+\textbf{Dashboard}: compare adopters with non-adopters; for pricing, compare
+conversion before and after the old change, and if price never changed,
+assume demand will not react. \textbf{Causal advisor}: compare adopters with
+statistically similar non-adopters; for pricing, fit a demand model
+controlling for trend and seasonality. Then stress test: widen the
 uncertainty range and re-estimate as if the most important attribute were
-missing. If the decision flips anywhere in that range, do not act; request
-an experiment and accept its cost.
-
-\paragraph{A/B test} A randomized test as a busy company runs one: 10
-percent of users, three months (paywall) or two months (pricing), and the
-short-term result scaled to a full year. The randomization is honest; the
-scaling is the risk.
-
-\section{Results}
+missing; if the decision flips anywhere in that range, request an experiment
+instead of acting. \textbf{A/B test}: a randomized test as a busy company
+runs one, 10 percent of users for three months (paywall) or two months
+(pricing), short-term result scaled to a year. The randomization is honest;
+the scaling is the risk.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{figs/estimates-vs-truth.pdf}
+  \includegraphics[width=0.92\linewidth]{figs/estimates-vs-truth.pdf}
   \caption{\textbf{Why the dashboard gets fooled, and how much the advisor
-  fixes.} \textbf{(a)}~Paywall decision: estimated dollar value of the
-  feature as the hidden-bias dial increases, averaged over both worlds, with
-  95 percent intervals over 30 repetitions. The dashboard (grey) reads
-  \$17--18 when the truth (dashed) is about \$5; the advisor (red) removes
-  most, not all, of the gap. \textbf{(b)}~Pricing decision: error in the
-  estimated price sensitivity when the past price change coincided with an
-  improving product. The before/after reading is off by $-0.35$, which makes
-  demand look insensitive; the advisor's trend-controlled estimate stays
-  near zero.}
+  fixes.} \textbf{(a)}~Paywall: estimated dollar value of the feature vs.\
+  the hidden-bias dial (mean over both worlds, 95 percent intervals, 30
+  repetitions). The dashboard reads \$17--18 when the truth is about \$5;
+  the advisor removes most, not all, of the gap. \textbf{(b)}~Pricing: error
+  in estimated price sensitivity when the past change coincided with an
+  improving product. Before/after is off by $-0.35$; the trend-controlled
+  advisor stays near zero.}
   \label{fig:bias}
 \end{figure}
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{figs/regret-by-regime.pdf}
+  \includegraphics[width=0.92\linewidth]{figs/regret-by-regime.pdf}
   \caption{\textbf{Every method except the advisor has a situation that
-  ruins it.} Average profit lost per thousand users per year (95 percent
-  intervals, 30 repetitions). \textbf{(a)}~Paywall: the dashboard never
-  locks the feature, missing the profitable paywall (left); the three month
-  A/B test misses slow churn damage and approves the harmful paywall
-  (right). \textbf{(b)}~Pricing: the dashboard raises into price-sensitive
-  demand; the A/B test does well because pricing feedback is fast.}
+  ruins it.} Profit lost per thousand users per year (95 percent intervals,
+  30 repetitions). \textbf{(a)}~Paywall: the dashboard never locks, missing
+  the profitable paywall; the three month A/B test misses slow churn damage
+  and approves the harmful one. \textbf{(b)}~Pricing: the dashboard raises
+  into price-sensitive demand; the A/B test does well because pricing
+  feedback is fast.}
   \label{fig:regret}
 \end{figure}
 
+\section{Results}
+
 \begin{table}[t]
 \centering
-\caption{\textbf{Overall scores across all situations.} Accuracy is the
-share of runs choosing the truly better action; regret is average profit
-lost per thousand users (paywall) or signups (pricing) per year. The last
-column is how often the advisor asked for an experiment instead of acting.
-Per-situation breakdowns are in Figure~\ref{fig:regret}.}
+\caption{\textbf{Overall scores.} Accuracy is the share of runs choosing the
+truly better action; regret is average profit lost per thousand users
+(paywall) or signups (pricing) per year; the last column is how often the
+advisor asked for an experiment. Per-situation breakdowns in
+Figure~\ref{fig:regret}.}
 \label{tab:overall}
 \small
 \begin{tabular}{llrrr}
@@ -233,67 +217,55 @@ Decision & Method & Accuracy & Regret (\$/1k/yr) & Asked for test \\
 
 \paragraph{The dashboard fails when the right move looks wrong}
 Figure~\ref{fig:bias}a shows the mechanism: the raw adopter comparison
-overrates the feature by roughly a factor of three, at every level of the
+overrates the feature by roughly a factor of three at every level of the
 hidden-bias dial. Convinced the feature is precious, the dashboard never
-locks it, which is exactly wrong in the world where locking is profitable
-(\$2{,}689 lost per thousand users per year, Figure~\ref{fig:regret}a). In
-pricing, the misread elasticity (Figure~\ref{fig:bias}b) plus the
-``demand won't react'' default make it raise the price even when demand is
-sensitive, losing up to \$5{,}446 per thousand signups in the worst
-settings. The failure is systematic: the same confident reading appears in
-worlds that need opposite answers.
+locks it, which is exactly wrong in the world where locking pays (\$2{,}689
+lost per thousand users per year, Figure~\ref{fig:regret}a). In pricing, the
+misread elasticity (Figure~\ref{fig:bias}b) plus the ``demand won't react''
+default make it raise into sensitive demand, losing up to \$5{,}446 per
+thousand signups. The failure is systematic: the same confident reading
+appears in worlds that need opposite answers.
 
 \paragraph{The A/B test fails when damage is slower than the test}
-In the three month paywall test, upgrade revenue from users paying to unlock
-arrives quickly, but churn from frustrated users has barely started. Scaled
-to a year, the early revenue wins, and the test approves the harmful paywall
-in 97 percent of those runs, losing \$5{,}380 per thousand users per year.
-That is worse than no analysis: the dashboard, right here by accident, loses
-nothing. The pricing test has no such problem because conversion reacts
-within the window (Figure~\ref{fig:regret}b). A short test is a bet that the
-effects you care about arrive quickly.
+In the three month paywall test, unlock revenue arrives quickly but
+frustration churn has barely started. Scaled to a year, the early revenue
+wins, and the test approves the harmful paywall in 97 percent of those runs,
+losing \$5{,}380 per thousand users per year, worse than no analysis at all.
+The pricing test is fine because conversion reacts within the window
+(Figure~\ref{fig:regret}b). A short test is a bet that the effects you care
+about arrive quickly.
 
 \paragraph{The advisor is never the worst option}
 Its adjustment removes about half the bias (Figure~\ref{fig:bias}), enough
-to choose correctly most of the time, and its stress test converts many of
-the remaining dangerous calls into ``run an experiment,'' including every
-single run where the price had never changed. It posts the lowest overall
-regret in both decisions (Table~\ref{tab:overall}), and its worst situation
+to choose correctly most of the time, and its stress test converts many
+remaining dangerous calls into ``run an experiment,'' including every run
+where the price had never changed. It posts the lowest overall regret in
+both decisions (Table~\ref{tab:overall}), and its worst situation
 (\$1{,}101) is far safer than the dashboard's (\$2{,}689) or the A/B test's
-(\$5{,}380).
+(\$5{,}380). One surprise: when the advisor declines the paywall question it
+hands the decision to the A/B test, which is usually wrong in the world
+where locking backfires, so the advisor inherits part of that error. Asking
+for a test is only as safe as the test; the advisor must also specify how
+long to run it and what to measure.
 
-\paragraph{One surprise: asking for a test is only as safe as the test}
-When the advisor declines the paywall question it hands the decision to the
-A/B test, and in the world where locking backfires that test is usually
-wrong, so the advisor inherits part of its error. Saying ``run an
-experiment'' is not the end of the job: the advisor must also say how long
-to run it and what to measure, or the test repeats the mistake.
+\section{Limitations and conclusion}
+These numbers show a pattern, not what any real company would measure. We
+tuned both the simulator and the methods, with no separation between test
+maker and test taker \citep{hahn2019}; the A/B failure follows from the
+short window and crude scale-up we gave it, and a longer test or better
+early indicators would close much of that gap; all methods share one
+simplified profit formula; and the advisor's stress test is a heuristic
+stand-in for formal sensitivity analysis \citep{chernozhukov2018}, which
+matters because even careful adjustment can miss, as paired experimental and
+observational data at Microsoft recently showed \citep{young2026}.
+Semi-synthetic replication on real subscription data is the next step.
 
-\section{Limitations}
-Everything here happens inside a world we built, so the numbers show the
-pattern, not what a real company would measure. We tuned both the simulator
-and the methods ourselves, with no separation between test maker and test
-taker, which benchmarks like ACIC treat as essential \citep{hahn2019}; real
-or semi-synthetic subscription data is the needed next step. The A/B test's
-paywall failure follows from the short window and crude scale-up we gave it;
-a longer test or smarter early indicators would close much of the gap, and
-we did not run that comparison. All methods share one simplified profit
-formula, so we compare evidence quality, not business models. And the
-advisor's stress test is a cheap heuristic; real deployments need formal
-sensitivity analysis \citep{chernozhukov2018}, since even careful adjustment
-can miss, as paired experimental and observational data at Microsoft
-recently showed \citep{young2026}.
-
-\section{Conclusion}
-The two methods businesses actually use are both gambles on which world they
-live in. The dashboard is disastrous exactly when the profitable move looks
-counterintuitive. The short A/B test is disastrous exactly when the damage
-arrives more slowly than the test. The causal advisor, which adjusts for
-what it can measure and asks for an experiment when the answer is not solid,
-was never the worst option in our study. That is the honest pitch for this
-kind of product: not ``better than an A/B test,'' but ``never the method
-that quietly loses five dollars per user per year, and clear about when you
-really do need to test.''
+The conclusion the study supports: the two methods businesses actually use
+are gambles on which world they live in, each disastrous in a situation the
+other survives. The causal advisor, which adjusts for what it can measure
+and asks for an experiment when the answer is not solid, was never the worst
+option. That is the honest pitch: not ``better than an A/B test,'' but
+``never the method that quietly loses five dollars per user per year.''
 
 \begin{thebibliography}{6}
 
